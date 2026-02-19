@@ -1,0 +1,18 @@
+# Node
+node_modules/
+.pnpm-store/
+
+# Rust
+/target/
+
+# Anchor / Solana
+.anchor/
+.test-ledger/
+**/.DS_Store
+
+# Env
+.env
+.env.*
+
+# Logs
+*.log

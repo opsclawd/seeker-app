@@ -1,0 +1,16 @@
+{
+  "name": "seeker-app",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.29.3",
+  "engines": {
+    "node": "22.22.0"
+  },
+  "scripts": {
+    "fmt": "prettier -w .",
+    "lint": "prettier -c ."
+  },
+  "devDependencies": {
+    "prettier": "3.5.1"
+  }
+}
