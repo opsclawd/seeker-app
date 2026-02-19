@@ -64,6 +64,35 @@ describe('phase0 seeker_app', () => {
     assert.isAtLeast(a2.updatedAt.toNumber(), a1.updatedAt.toNumber());
   });
 
+  const assertAnchorError = (e: unknown, want: { code?: string; number?: number }) => {
+    const anyErr = e as any;
+
+    // Normalize across Anchor versions/throw-sites.
+    const gotCode = anyErr?.error?.errorCode?.code ?? anyErr?.error?.errorCode?.errorCode;
+    const gotNumber = anyErr?.error?.errorCode?.number;
+
+    // Some errors only include logs (e.g., TransactionError). Grab a compact tail for diagnostics.
+    const logs: string[] | undefined = anyErr?.logs ?? anyErr?.error?.logs;
+    const logsTail = logs ? logs.slice(Math.max(0, logs.length - 10)).join('\n') : '';
+
+    // Ensure error context includes this program id when present.
+    const gotProgramId = anyErr?.program?.toBase58?.();
+    if (gotProgramId) {
+      assert.equal(gotProgramId, program.programId.toBase58());
+    } else if (logsTail) {
+      assert.match(logsTail, new RegExp(program.programId.toBase58()));
+    }
+
+    if (want.code) assert.equal(gotCode, want.code, `want code=${want.code} got=${gotCode}\n${logsTail}`);
+    if (want.number !== undefined) {
+      assert.equal(gotNumber, want.number, `want number=${want.number} got=${gotNumber}\n${logsTail}`);
+    }
+
+    if (!want.code && want.number === undefined && !gotCode && gotNumber === undefined) {
+      assert.fail(`Unrecognized Anchor error shape. ${logsTail || String(e)}`);
+    }
+  };
+
   it("wrong signer cannot write to someone else’s PDA", async () => {
     const authorityA = Keypair.generate();
     const authorityB = Keypair.generate();
@@ -84,10 +113,9 @@ describe('phase0 seeker_app', () => {
       .signers([authorityA])
       .rpc();
 
-    // Now attempt to write to A's PDA but claim authority=B. This should fail
-    // because the PDA seeds must match ("hello", authority).
+    // Now attempt to write to A's PDA but claim authority=B. This must fail due to seed constraint.
     let threw = false;
-    let errStr = '';
+    let caught: unknown;
     try {
       await program.methods
         .helloWrite('nope')
@@ -100,20 +128,28 @@ describe('phase0 seeker_app', () => {
         .rpc();
     } catch (e) {
       threw = true;
-      errStr = String(e);
+      caught = e;
     }
     assert.isTrue(threw);
-    assert.match(errStr, /ConstraintSeeds|seeds/i);
+    assertAnchorError(caught, { code: 'ConstraintSeeds', number: 2006 });
   });
 
-  it('message too long fails', async () => {
+  it('message too long fails (and does not mutate state)', async () => {
     const authority = provider.wallet.publicKey;
     const [helloState] = findHelloPda(authority);
+
+    // Ensure account exists with known state.
+    await program.methods
+      .helloWrite('ok')
+      .accounts({ authority, helloState, systemProgram: SystemProgram.programId })
+      .rpc();
+
+    const before = await program.account.helloState.fetch(helloState);
 
     const tooLong = 'a'.repeat(65);
 
     let threw = false;
-    let errStr = '';
+    let caught: unknown;
     try {
       await program.methods
         .helloWrite(tooLong)
@@ -121,10 +157,14 @@ describe('phase0 seeker_app', () => {
         .rpc();
     } catch (e) {
       threw = true;
-      errStr = String(e);
+      caught = e;
     }
 
     assert.isTrue(threw);
-    assert.match(errStr, /MessageTooLong/i);
+    assertAnchorError(caught, { code: 'MessageTooLong' });
+
+    const after = await program.account.helloState.fetch(helloState);
+    assert.equal(after.message, before.message);
+    assert.equal(after.updatedAt.toString(), before.updatedAt.toString());
   });
 });
