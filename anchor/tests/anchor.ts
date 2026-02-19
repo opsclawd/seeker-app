@@ -64,6 +64,21 @@ describe('phase0 seeker_app', () => {
     assert.isAtLeast(a2.updatedAt.toNumber(), a1.updatedAt.toNumber());
   });
 
+  const assertAnchorError = (e: unknown, want: { code?: string; number?: number }) => {
+    const anyErr = e as any;
+
+    // AnchorError shape: { error: { errorCode: { code, number }, ... }, program: PublicKey, ... }
+    const gotCode = anyErr?.error?.errorCode?.code;
+    const gotNumber = anyErr?.error?.errorCode?.number;
+
+    if (want.code) assert.equal(gotCode, want.code);
+    if (want.number !== undefined) assert.equal(gotNumber, want.number);
+
+    // Ensure the error context includes this program id (guards against RPC/cluster errors)
+    const gotProgramId = anyErr?.program?.toBase58?.();
+    assert.equal(gotProgramId, program.programId.toBase58());
+  };
+
   it("wrong signer cannot write to someone else’s PDA", async () => {
     const authorityA = Keypair.generate();
     const authorityB = Keypair.generate();
@@ -84,10 +99,9 @@ describe('phase0 seeker_app', () => {
       .signers([authorityA])
       .rpc();
 
-    // Now attempt to write to A's PDA but claim authority=B. This should fail
-    // because the PDA seeds must match ("hello", authority).
+    // Now attempt to write to A's PDA but claim authority=B. This must fail due to seed constraint.
     let threw = false;
-    let errStr = '';
+    let caught: unknown;
     try {
       await program.methods
         .helloWrite('nope')
@@ -100,10 +114,10 @@ describe('phase0 seeker_app', () => {
         .rpc();
     } catch (e) {
       threw = true;
-      errStr = String(e);
+      caught = e;
     }
     assert.isTrue(threw);
-    assert.match(errStr, /ConstraintSeeds|seeds/i);
+    assertAnchorError(caught, { code: 'ConstraintSeeds', number: 2006 });
   });
 
   it('message too long fails', async () => {
@@ -113,7 +127,7 @@ describe('phase0 seeker_app', () => {
     const tooLong = 'a'.repeat(65);
 
     let threw = false;
-    let errStr = '';
+    let caught: unknown;
     try {
       await program.methods
         .helloWrite(tooLong)
@@ -121,10 +135,10 @@ describe('phase0 seeker_app', () => {
         .rpc();
     } catch (e) {
       threw = true;
-      errStr = String(e);
+      caught = e;
     }
 
     assert.isTrue(threw);
-    assert.match(errStr, /MessageTooLong/i);
+    assertAnchorError(caught, { code: 'MessageTooLong' });
   });
 });

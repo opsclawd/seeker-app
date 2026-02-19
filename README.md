@@ -119,6 +119,9 @@ Note: the script reads the built IDL at `anchor/target/idl/seeker_app.json`, so 
 Terminal 1 (local validator):
 
 ```bash
+# Fail fast if the default localnet RPC port is already in use
+lsof -i :8899 || true
+
 export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
 solana-test-validator --reset
 ```
