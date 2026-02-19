@@ -8,6 +8,8 @@ node_modules/
 # Anchor / Solana
 .anchor/
 .test-ledger/
+anchor/.anchor/
+anchor/test-ledger/
 **/.DS_Store
 
 # Env

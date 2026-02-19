@@ -40,11 +40,23 @@ pnpm -v
 ### Solana/Agave CLI v2.3.0
 Pick one installation strategy and stick to it across the team.
 
-**Option A: `solana-install` (recommended)**
+**Option A: Agave installer (GitHub release asset)**
 
 ```bash
-sh -c "$(curl -sSfL https://release.solana.com/v2.3.0/install)"
+# Linux x86_64 example
+gh release download v2.3.0 --repo anza-xyz/agave --pattern 'agave-install-init-x86_64-unknown-linux-gnu'
+chmod +x agave-install-init-x86_64-unknown-linux-gnu
+./agave-install-init-x86_64-unknown-linux-gnu v2.3.0
+
+export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
 solana --version
+```
+
+If `anchor test` errors about missing platform tools, install the SBF SDK deps:
+
+```bash
+# installs platform-tools into ~/.cache/solana/v1.48/
+bash "$HOME/.cache/solana/v1.48/sbf-sdk/scripts/install.sh"
 ```
 
 **Option B: existing system package manager**
@@ -64,8 +76,58 @@ anchor --version
 
 - `anchor/` — Anchor workspace (program + tests)
 - `app/` — client app (later, Next.js)
-- `scripts/` — bootstrap helpers
+- `scripts/` — TS script harness(es)
 
-## Quick start (once Phase 0 spec lands)
+## Phase 0 (localnet)
 
-We’ll add exact commands after the Phase 0 spec is finalized (local validator workflow + Anchor workspace + TS test harness).
+### Install deps
+
+Repo root (script harness tooling):
+
+```bash
+# if pnpm isn't installed yet
+npm i -g pnpm@10.29.3
+
+pnpm install
+```
+
+Anchor workspace (tests tooling):
+
+```bash
+cd anchor
+npm ci
+```
+
+### Build
+
+```bash
+cd anchor
+anchor build
+```
+
+### Run tests (deterministic localnet)
+
+```bash
+cd anchor
+anchor test
+```
+
+### Run script (`scripts/hello.ts`)
+
+Terminal 1 (local validator):
+
+```bash
+export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
+solana-test-validator --reset
+```
+
+Terminal 2 (build IDL + run script):
+
+```bash
+cd anchor
+anchor build
+
+cd ..
+export ANCHOR_PROVIDER_URL=http://127.0.0.1:8899
+pnpm hello
+```
