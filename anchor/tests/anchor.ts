@@ -67,16 +67,30 @@ describe('phase0 seeker_app', () => {
   const assertAnchorError = (e: unknown, want: { code?: string; number?: number }) => {
     const anyErr = e as any;
 
-    // AnchorError shape: { error: { errorCode: { code, number }, ... }, program: PublicKey, ... }
-    const gotCode = anyErr?.error?.errorCode?.code;
+    // Normalize across Anchor versions/throw-sites.
+    const gotCode = anyErr?.error?.errorCode?.code ?? anyErr?.error?.errorCode?.errorCode;
     const gotNumber = anyErr?.error?.errorCode?.number;
 
-    if (want.code) assert.equal(gotCode, want.code);
-    if (want.number !== undefined) assert.equal(gotNumber, want.number);
+    // Some errors only include logs (e.g., TransactionError). Grab a compact tail for diagnostics.
+    const logs: string[] | undefined = anyErr?.logs ?? anyErr?.error?.logs;
+    const logsTail = logs ? logs.slice(Math.max(0, logs.length - 10)).join('\n') : '';
 
-    // Ensure the error context includes this program id (guards against RPC/cluster errors)
+    // Ensure error context includes this program id when present.
     const gotProgramId = anyErr?.program?.toBase58?.();
-    assert.equal(gotProgramId, program.programId.toBase58());
+    if (gotProgramId) {
+      assert.equal(gotProgramId, program.programId.toBase58());
+    } else if (logsTail) {
+      assert.match(logsTail, new RegExp(program.programId.toBase58()));
+    }
+
+    if (want.code) assert.equal(gotCode, want.code, `want code=${want.code} got=${gotCode}\n${logsTail}`);
+    if (want.number !== undefined) {
+      assert.equal(gotNumber, want.number, `want number=${want.number} got=${gotNumber}\n${logsTail}`);
+    }
+
+    if (!want.code && want.number === undefined && !gotCode && gotNumber === undefined) {
+      assert.fail(`Unrecognized Anchor error shape. ${logsTail || String(e)}`);
+    }
   };
 
   it("wrong signer cannot write to someone else’s PDA", async () => {
@@ -120,9 +134,17 @@ describe('phase0 seeker_app', () => {
     assertAnchorError(caught, { code: 'ConstraintSeeds', number: 2006 });
   });
 
-  it('message too long fails', async () => {
+  it('message too long fails (and does not mutate state)', async () => {
     const authority = provider.wallet.publicKey;
     const [helloState] = findHelloPda(authority);
+
+    // Ensure account exists with known state.
+    await program.methods
+      .helloWrite('ok')
+      .accounts({ authority, helloState, systemProgram: SystemProgram.programId })
+      .rpc();
+
+    const before = await program.account.helloState.fetch(helloState);
 
     const tooLong = 'a'.repeat(65);
 
@@ -140,5 +162,9 @@ describe('phase0 seeker_app', () => {
 
     assert.isTrue(threw);
     assertAnchorError(caught, { code: 'MessageTooLong' });
+
+    const after = await program.account.helloState.fetch(helloState);
+    assert.equal(after.message, before.message);
+    assert.equal(after.updatedAt.toString(), before.updatedAt.toString());
   });
 });
