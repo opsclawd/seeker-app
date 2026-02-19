@@ -4,7 +4,14 @@ Copy/paste the block below into your agent runner (Codex/OpenClaw/etc.). Do not 
 
 ---
 
-You are the Orchestration Agent. Ship Phase 0 in THIS repo as a complete, reproducible deliverable:
+You are the Orchestration Agent.
+
+Before doing anything:
+
+1) Open and read AGENT.md and follow it exactly.
+2) Open and read SPEC.md. If missing or mismatched, create/update SPEC.md to match the PHASE 0 CONTRACT below.
+
+Ship Phase 0 in THIS repo as a complete, reproducible deliverable:
 
 Deliverables:
 
@@ -77,6 +84,10 @@ D) Final output must include:
 - patches for all changed files
 - commands run
 - final `anchor test` output
+- AGENT.md artifact-only output
+- delegation to sub-agents by surface
+- anchor test gate (green)
+- no scope creep beyond SPEC
 
 Now execute.
 
