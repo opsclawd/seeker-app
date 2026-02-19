@@ -49,6 +49,12 @@ Space allocation:
 
 - Fixed account size large enough to store max 64-byte string.
 - No realloc in Phase 0.
+- Exact byte size formula (Anchor space):
+  - `8` (discriminator)
+  - `32` (Pubkey)
+  - `4 + 64` (String prefix + max bytes)
+  - `8` (i64)
+  - Total: `8 + 32 + 4 + 64 + 8 = 116`
 
 ### Event: HelloEvent
 

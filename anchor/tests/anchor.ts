@@ -2,13 +2,13 @@ import * as anchor from '@coral-xyz/anchor';
 import { Program } from '@coral-xyz/anchor';
 import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
 import { assert } from 'chai';
-import { Anchor } from '../target/types/anchor';
+import { SeekerApp } from '../target/types/seeker_app';
 
-describe('phase0', () => {
+describe('phase0 seeker_app', () => {
   anchor.setProvider(anchor.AnchorProvider.env());
 
   const provider = anchor.getProvider() as anchor.AnchorProvider;
-  const program = anchor.workspace.anchor as Program<Anchor>;
+  const program = anchor.workspace.seekerApp as Program<SeekerApp>;
 
   const findHelloPda = (authority: PublicKey): [PublicKey, number] => {
     return PublicKey.findProgramAddressSync([Buffer.from('hello'), authority.toBuffer()], program.programId);
@@ -87,6 +87,7 @@ describe('phase0', () => {
     // Now attempt to write to A's PDA but claim authority=B. This should fail
     // because the PDA seeds must match ("hello", authority).
     let threw = false;
+    let errStr = '';
     try {
       await program.methods
         .helloWrite('nope')
@@ -99,8 +100,10 @@ describe('phase0', () => {
         .rpc();
     } catch (e) {
       threw = true;
+      errStr = String(e);
     }
     assert.isTrue(threw);
+    assert.match(errStr, /ConstraintSeeds|seeds/i);
   });
 
   it('message too long fails', async () => {
@@ -110,6 +113,7 @@ describe('phase0', () => {
     const tooLong = 'a'.repeat(65);
 
     let threw = false;
+    let errStr = '';
     try {
       await program.methods
         .helloWrite(tooLong)
@@ -117,8 +121,10 @@ describe('phase0', () => {
         .rpc();
     } catch (e) {
       threw = true;
+      errStr = String(e);
     }
 
     assert.isTrue(threw);
+    assert.match(errStr, /MessageTooLong/i);
   });
 });

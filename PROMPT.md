@@ -68,7 +68,12 @@ Docs:
 
 Execution protocol:
 
-A) Ensure repo builds as Anchor workspace (initialize if needed).
+A) Repo is a split layout:
+   - Anchor workspace (program + tests) lives in `./anchor/`
+   - Script harness lives at repo root in `./scripts/`
+
+   Ensure you run Anchor commands from `./anchor` (e.g. `cd anchor && anchor test`).
+   Do NOT initialize a second Anchor workspace.
 
 B) Spawn sub-agents:
 

@@ -95,7 +95,7 @@ Anchor workspace (tests tooling):
 
 ```bash
 cd anchor
-npm ci
+pnpm install --frozen-lockfile
 ```
 
 ### Build
@@ -113,6 +113,8 @@ anchor test
 ```
 
 ### Run script (`scripts/hello.ts`)
+
+Note: the script reads the built IDL at `anchor/target/idl/seeker_app.json`, so you must run `anchor build` first.
 
 Terminal 1 (local validator):
 

@@ -6,7 +6,7 @@ const HELLO_SEED: &[u8] = b"hello";
 const MAX_MESSAGE_BYTES: usize = 64;
 
 #[program]
-pub mod anchor {
+pub mod seeker_app {
     use super::*;
 
     pub fn hello_write(ctx: Context<HelloWrite>, message: String) -> Result<()> {
