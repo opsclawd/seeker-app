@@ -2,6 +2,12 @@
 
 Solana App Builder repo (pinned toolchain). This repo is intended to evolve module-by-module (no throwaway demos).
 
+## Bootcamp docs
+
+- `SPEC.md` — current phase contract (spec is law)
+- `AGENT.md` — execution protocol (artifact-first, no scope creep)
+- `PROMPT.md` — single-prompt benchmark runner input
+
 ## Pinned versions (do not float)
 
 - Agave/Solana tooling: **v2.3.0**
